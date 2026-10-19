@@ -1,0 +1,350 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model College {
+  id                String    @id @default(cuid())
+  name              String
+  code              String    @unique
+  address           String?
+  website           String?
+  placementPolicy   String?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+  users             User[]
+  drives            PlacementDrive[]
+  announcements     Announcement[]
+  settings          CollegeSettings?
+}
+
+model User {
+  id                String    @id @default(cuid())
+  email             String    @unique
+  password          String
+  role              String
+  isEmailVerified   Boolean   @default(false)
+  emailVerifyToken  String?
+  resetToken        String?
+  resetTokenExpiry  DateTime?
+  isActive          Boolean   @default(true)
+  collegeId         String
+  college           College   @relation(fields: [collegeId], references: [id])
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+  studentProfile    StudentProfile?
+  recruiterProfile  RecruiterProfile?
+  notifications     Notification[]
+  auditLogs         AuditLog[]
+}
+
+model StudentProfile {
+  id                String    @id @default(cuid())
+  userId            String    @unique
+  user              User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  firstName         String
+  lastName          String
+  phone             String?
+  photoUrl          String?
+  rollNumber        String?
+  graduationYear    Int?
+  branch            String?
+  degree            String?
+  cgpa              Float?
+  class10Percent    Float?
+  class12Percent    Float?
+  activeBacklogs    Int       @default(0)
+  backlogHistory    Int       @default(0)
+  linkedinUrl       String?
+  githubUrl         String?
+  portfolioUrl      String?
+  bio               String?
+  profileComplete   Int       @default(0)
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+  skills            StudentSkill[]
+  projects          Project[]
+  experiences       Experience[]
+  certifications    Certification[]
+  resumes           Resume[]
+  applications      Application[]
+  bookmarks         Bookmark[]
+}
+
+model Skill {
+  id            String    @id @default(cuid())
+  name          String    @unique
+  category      String?
+  createdAt     DateTime  @default(now())
+  studentSkills StudentSkill[]
+  driveSkills   DriveSkillRequirement[]
+}
+
+model StudentSkill {
+  id          String    @id @default(cuid())
+  studentId   String
+  student     StudentProfile @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  skillId     String
+  skill       Skill     @relation(fields: [skillId], references: [id])
+  proficiency String    @default("BEGINNER")
+  createdAt   DateTime  @default(now())
+  @@unique([studentId, skillId])
+}
+
+model Project {
+  id            String    @id @default(cuid())
+  studentId     String
+  student       StudentProfile @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  title         String
+  description   String?
+  technologies  String?
+  githubUrl     String?
+  liveUrl       String?
+  startDate     DateTime?
+  endDate       DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+}
+
+model Experience {
+  id            String    @id @default(cuid())
+  studentId     String
+  student       StudentProfile @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  company       String
+  role          String
+  description   String?
+  startDate     DateTime
+  endDate       DateTime?
+  isCurrent     Boolean   @default(false)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+}
+
+model Certification {
+  id            String    @id @default(cuid())
+  studentId     String
+  student       StudentProfile @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  title         String
+  issuer        String
+  issueDate     DateTime?
+  expiryDate    DateTime?
+  credentialUrl String?
+  createdAt     DateTime  @default(now())
+}
+
+model Resume {
+  id            String    @id @default(cuid())
+  studentId     String
+  student       StudentProfile @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  filename      String
+  originalName  String
+  fileUrl       String
+  fileSize      Int
+  isDefault     Boolean   @default(false)
+  version       Int       @default(1)
+  createdAt     DateTime  @default(now())
+  applications  Application[]
+}
+
+model Company {
+  id            String    @id @default(cuid())
+  name          String    @unique
+  logoUrl       String?
+  website       String?
+  industry      String?
+  description   String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  drives        PlacementDrive[]
+  recruiters    RecruiterProfile[]
+}
+
+model RecruiterProfile {
+  id            String    @id @default(cuid())
+  userId        String    @unique
+  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  companyId     String
+  company       Company   @relation(fields: [companyId], references: [id])
+  name          String
+  designation   String?
+  phone         String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+}
+
+model PlacementDrive {
+  id                String    @id @default(cuid())
+  collegeId         String
+  college           College   @relation(fields: [collegeId], references: [id])
+  companyId         String
+  company           Company   @relation(fields: [companyId], references: [id])
+  title             String
+  description       String?
+  jobType           String
+  ctc               Float?
+  stipend           Float?
+  packageBreakdown  String?
+  location          String?
+  workMode          String    @default("ON_SITE")
+  vacancies         Int?
+  applicationOpenDate DateTime
+  applicationCloseDate DateTime
+  status            String    @default("DRAFT")
+  createdBy         String?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+  eligibilityCriteria EligibilityCriteria?
+  eligibleBranches  DriveEligibleBranch[]
+  skillRequirements DriveSkillRequirement[]
+  stages            RecruitmentStage[]
+  applications      Application[]
+  bookmarks         Bookmark[]
+}
+
+model EligibilityCriteria {
+  id              String    @id @default(cuid())
+  driveId         String    @unique
+  drive           PlacementDrive @relation(fields: [driveId], references: [id], onDelete: Cascade)
+  minCgpa         Float?
+  minClass10      Float?
+  minClass12      Float?
+  maxActiveBacklogs Int     @default(0)
+  allowBacklogHistory Boolean @default(false)
+  graduationYears String?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+}
+
+model DriveEligibleBranch {
+  id        String    @id @default(cuid())
+  driveId   String
+  drive     PlacementDrive @relation(fields: [driveId], references: [id], onDelete: Cascade)
+  branch    String
+  @@unique([driveId, branch])
+}
+
+model DriveSkillRequirement {
+  id        String    @id @default(cuid())
+  driveId   String
+  drive     PlacementDrive @relation(fields: [driveId], references: [id], onDelete: Cascade)
+  skillId   String
+  skill     Skill     @relation(fields: [skillId], references: [id])
+  isRequired Boolean  @default(true)
+  @@unique([driveId, skillId])
+}
+
+model RecruitmentStage {
+  id          String    @id @default(cuid())
+  driveId     String
+  drive       PlacementDrive @relation(fields: [driveId], references: [id], onDelete: Cascade)
+  name        String
+  order       Int
+  description String?
+  createdAt   DateTime  @default(now())
+  interviews  Interview[]
+}
+
+model Application {
+  id              String    @id @default(cuid())
+  studentId       String
+  student         StudentProfile @relation(fields: [studentId], references: [id])
+  driveId         String
+  drive           PlacementDrive @relation(fields: [driveId], references: [id])
+  resumeId        String?
+  resume          Resume?   @relation(fields: [resumeId], references: [id])
+  status          String    @default("APPLIED")
+  appliedAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  statusHistory   ApplicationStatusHistory[]
+  interviews      Interview[]
+  @@unique([studentId, driveId])
+}
+
+model ApplicationStatusHistory {
+  id            String    @id @default(cuid())
+  applicationId String
+  application   Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  status        String
+  changedBy     String?
+  note          String?
+  createdAt     DateTime  @default(now())
+}
+
+model Interview {
+  id              String    @id @default(cuid())
+  applicationId   String
+  application     Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  stageId         String?
+  stage           RecruitmentStage? @relation(fields: [stageId], references: [id])
+  scheduledAt     DateTime
+  mode            String    @default("ONLINE")
+  location        String?
+  meetingLink     String?
+  feedback        String?
+  result          String?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+}
+
+model Notification {
+  id          String    @id @default(cuid())
+  userId      String
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type        String
+  title       String
+  message     String
+  isRead      Boolean   @default(false)
+  data        String?
+  createdAt   DateTime  @default(now())
+  @@index([userId, isRead])
+}
+
+model Announcement {
+  id          String    @id @default(cuid())
+  collegeId   String
+  college     College   @relation(fields: [collegeId], references: [id])
+  title       String
+  content     String
+  createdBy   String
+  targetRoles String?
+  createdAt   DateTime  @default(now())
+}
+
+model AuditLog {
+  id          String    @id @default(cuid())
+  userId      String
+  user        User      @relation(fields: [userId], references: [id])
+  action      String
+  entity      String
+  entityId    String?
+  details     String?
+  ipAddress   String?
+  createdAt   DateTime  @default(now())
+  @@index([userId])
+  @@index([entity, entityId])
+}
+
+model Bookmark {
+  id          String    @id @default(cuid())
+  studentId   String
+  student     StudentProfile @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  driveId     String
+  drive       PlacementDrive @relation(fields: [driveId], references: [id], onDelete: Cascade)
+  createdAt   DateTime  @default(now())
+  @@unique([studentId, driveId])
+}
+
+model CollegeSettings {
+  id                    String    @id @default(cuid())
+  collegeId             String    @unique
+  college               College   @relation(fields: [collegeId], references: [id])
+  maxOffersPerStudent   Int       @default(1)
+  allowMultipleOffers   Boolean   @default(false)
+  requireEmailVerification Boolean @default(false)
+  placementYear         Int?
+  updatedAt             DateTime  @updatedAt
+}
